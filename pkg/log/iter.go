@@ -5,6 +5,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 type Iter struct {
@@ -36,8 +37,10 @@ func newIter(l *Log) (*Iter, error) {
 			if len(f.Name()) < 10 {
 				continue
 			}
-			if epoch, err := strconv.ParseInt(f.Name()[:10], 10, 64); err == nil {
-				uids = append(uids, epoch)
+			if strings.HasSuffix(f.Name(), storeExt) {
+				if epoch, err := strconv.ParseInt(f.Name()[:10], 10, 64); err == nil {
+					uids = append(uids, epoch)
+				}
 			}
 		}
 	}

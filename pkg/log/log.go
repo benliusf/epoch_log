@@ -20,8 +20,7 @@ type Log struct {
 
 	cache *lru
 
-	mu sync.Mutex
-
+	mu     sync.Mutex
 	closed atomic.Bool
 }
 
