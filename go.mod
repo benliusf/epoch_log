@@ -1,4 +1,4 @@
-module github.com/benliusf/index_log
+module github.com/benliusf/epoch_log
 
 go 1.23.4
 
