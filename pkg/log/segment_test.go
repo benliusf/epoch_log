@@ -36,6 +36,7 @@ func TestSegment(t *testing.T) {
 	for _, tt := range testData {
 		require.NoError(t, seg.append(tt))
 	}
+	require.NoError(t, seg.flush())
 
 	iter := seg.index.iter()
 	offset := 0

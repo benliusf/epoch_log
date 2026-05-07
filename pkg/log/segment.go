@@ -98,7 +98,7 @@ func (s *segment) append(record *Record) error {
 }
 
 func (s *segment) flush() error {
-	return s.store.flush()
+	return errors.Join(s.store.flush(), s.index.flush())
 }
 
 func (s *segment) close() error {
