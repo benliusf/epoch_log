@@ -20,7 +20,7 @@ func newIndex(f *os.File) (*index, error) {
 
 func (i *index) iter() *indexIter {
 	return &indexIter{
-		idx: i,
+		index: i,
 	}
 }
 
@@ -35,21 +35,21 @@ func (i *index) write(p []byte) (n uint64, pos uint64, err error) {
 }
 
 type indexIter struct {
-	idx *index
-	pos uint64
+	index *index
+	pos   uint64
 }
 
 func (i *indexIter) hasNext() bool {
-	return i.pos < i.idx.size
+	return i.pos < i.index.size
 }
 
 func (i *indexIter) next() (hash uint64, pos uint64, err error) {
 	b := make([]byte, 8)
-	if _, err := i.idx.readAt(b, i.pos); err != nil {
+	if _, err := i.index.readAt(b, i.pos); err != nil {
 		return 0, 0, err
 	}
 	hash = enc.Uint64(b)
-	if _, err := i.idx.readAt(b, i.pos+8); err != nil {
+	if _, err := i.index.readAt(b, i.pos+8); err != nil {
 		return 0, 0, err
 	}
 	pos = enc.Uint64(b)

@@ -20,7 +20,7 @@ var (
 )
 
 func TestLog(t *testing.T) {
-	dir, err := os.MkdirTemp("", "log-test")
+	dir, err := os.MkdirTemp("", "test_log")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 

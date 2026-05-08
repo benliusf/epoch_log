@@ -56,8 +56,7 @@ func newReader(uid int64, conf Config) (*segment, error) {
 }
 
 func openFiles(uid int64, dir string, readOnly bool) (storeFile, indexFile *os.File, err error) {
-	flag := os.O_RDWR | os.O_CREATE | os.O_APPEND
-	mode := os.FileMode(0644)
+	flag, mode := os.O_RDWR|os.O_CREATE|os.O_APPEND, os.FileMode(0644)
 	if readOnly {
 		flag, mode = os.O_RDWR, os.FileMode(0444)
 	}

@@ -91,11 +91,7 @@ func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
 
 	pos, ok := l.cache.get(epoch, hash)
 	if ok {
-		b, err := reader.store.read(uint64(pos))
-		if err != nil {
-			return nil, err
-		}
-		return b, nil
+		return reader.store.read(uint64(pos))
 	}
 
 	iter := reader.index.iter()
@@ -106,11 +102,7 @@ func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
 		}
 		l.cache.put(epoch, int64(idxHash), int64(pos))
 		if int64(idxHash) == hash {
-			b, err := reader.store.read(pos)
-			if err != nil {
-				return nil, err
-			}
-			return b, nil
+			return reader.store.read(pos)
 		}
 	}
 	return nil, nil

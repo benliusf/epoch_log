@@ -23,7 +23,7 @@ func TestSegment(t *testing.T) {
 		},
 	}
 
-	dir, err := os.MkdirTemp("", "index-test")
+	dir, err := os.MkdirTemp("", "test_segment")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 

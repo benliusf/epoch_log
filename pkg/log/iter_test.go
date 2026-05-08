@@ -23,7 +23,7 @@ var generateTestData = func() [][]byte {
 }
 
 func TestIter(t *testing.T) {
-	dir, err := os.MkdirTemp("", "iter-test")
+	dir, err := os.MkdirTemp("", "test_iter")
 	require.NoError(t, err)
 
 	log, err := NewLog(Config{

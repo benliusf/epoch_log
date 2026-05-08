@@ -55,16 +55,19 @@ func (s *store) write(p []byte) (n uint64, pos uint64, err error) {
 	return uint64(w), pos, nil
 }
 
+func (s *store) flush() error {
+	return s.buf.Flush()
+}
+
 func (s *store) revert(n uint64) error {
-	if err := s.Truncate(int64(n)); err != nil {
+	if err := s.flush(); err != nil {
+		return err
+	}
+	if err := s.Truncate(int64(s.size - n)); err != nil {
 		return err
 	}
 	s.size -= n
 	return nil
-}
-
-func (s *store) flush() error {
-	return s.buf.Flush()
 }
 
 func (s *store) read(pos uint64) ([]byte, error) {

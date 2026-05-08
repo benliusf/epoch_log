@@ -13,7 +13,7 @@ var (
 )
 
 func TestStoreWriteRead(t *testing.T) {
-	f, err := os.CreateTemp("", "store_write_read_test")
+	f, err := os.CreateTemp("", "test_store_write_read")
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
 
@@ -27,6 +27,7 @@ func TestStoreWriteRead(t *testing.T) {
 
 func testWrite(t *testing.T, s *store) {
 	t.Helper()
+
 	for i := uint64(1); i < 4; i++ {
 		n, pos, err := s.write(storeTestData)
 		require.NoError(t, err)
@@ -36,6 +37,7 @@ func testWrite(t *testing.T, s *store) {
 
 func testRead(t *testing.T, s *store) {
 	t.Helper()
+
 	var pos uint64
 	for i := uint64(1); i < 4; i++ {
 		read, err := s.read(pos)
@@ -47,6 +49,7 @@ func testRead(t *testing.T, s *store) {
 
 func testReadAt(t *testing.T, s *store) {
 	t.Helper()
+
 	for i, off := uint64(1), uint64(0); i < 4; i++ {
 		b := make([]byte, lenOffset)
 		n, err := s.readAt(b, off)
@@ -64,8 +67,8 @@ func testReadAt(t *testing.T, s *store) {
 	}
 }
 
-func TestStoreWriteRevert(t *testing.T) {
-	f, err := os.CreateTemp("", "store_write_revert_test")
+func TestStoreRevert(t *testing.T) {
+	f, err := os.CreateTemp("", "test_store_revert")
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
 
@@ -84,7 +87,7 @@ func TestStoreWriteRevert(t *testing.T) {
 }
 
 func TestStoreClose(t *testing.T) {
-	f, err := os.CreateTemp("", "store_close_test")
+	f, err := os.CreateTemp("", "test_store_close")
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
 
@@ -105,8 +108,7 @@ func TestStoreClose(t *testing.T) {
 }
 
 func openFile(name string) (file *os.File, size int64, err error) {
-	f, err := os.OpenFile(
-		name,
+	f, err := os.OpenFile(name,
 		os.O_RDWR|os.O_CREATE|os.O_APPEND,
 		0644)
 	if err != nil {
