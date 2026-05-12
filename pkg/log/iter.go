@@ -2,10 +2,6 @@ package log
 
 import (
 	"io"
-	"os"
-	"sort"
-	"strconv"
-	"strings"
 )
 
 type Iter struct {
@@ -20,37 +16,11 @@ type Iter struct {
 }
 
 func newIter(l *Log) (*Iter, error) {
-	dir, err := os.Open(l.Config.Dir)
+	uids, err := l.list()
 	if err != nil {
 		return nil, err
 	}
-	uids := []int64{}
-	for {
-		files, err := dir.ReadDir(100)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-		for _, f := range files {
-			if len(f.Name()) < 10 {
-				continue
-			}
-			if strings.HasSuffix(f.Name(), storeExt) {
-				if epoch, err := strconv.ParseInt(f.Name()[:10], 10, 64); err == nil {
-					uids = append(uids, epoch)
-				}
-			}
-		}
-	}
-	sort.Slice(uids, func(i, j int) bool {
-		return uids[i] < uids[j]
-	})
-	iter := &Iter{
-		log:  l,
-		uids: uids,
-	}
+	iter := &Iter{log: l, uids: uids}
 	return iter, iter.open()
 }
 

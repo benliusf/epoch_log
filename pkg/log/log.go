@@ -4,7 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -50,6 +55,37 @@ func (l *Log) setup() error {
 	l.w.run()
 	l.cache = newLRUCache(10_000)
 	return nil
+}
+
+func (l *Log) list() ([]int64, error) {
+	dir, err := os.Open(l.Config.Dir)
+	if err != nil {
+		return nil, err
+	}
+	uids := []int64{}
+	for {
+		files, err := dir.ReadDir(100)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		for _, f := range files {
+			if len(f.Name()) < 10 {
+				continue
+			}
+			if strings.HasSuffix(f.Name(), storeExt) {
+				if epoch, err := strconv.ParseInt(f.Name()[:10], 10, 64); err == nil {
+					uids = append(uids, epoch)
+				}
+			}
+		}
+	}
+	sort.Slice(uids, func(i, j int) bool {
+		return uids[i] < uids[j]
+	})
+	return uids, nil
 }
 
 func (l *Log) newSegment(uid int64) (*segment, error) {

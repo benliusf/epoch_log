@@ -35,6 +35,7 @@ func TestLog(t *testing.T) {
 	close(errs)
 	require.Equal(t, 0, len(errs))
 
+	testList(t, log)
 	testLogRead(t, log)
 	testRemove(t, log)
 }
@@ -49,6 +50,18 @@ func testAppend(t *testing.T, log *Log) {
 	}
 	require.NoError(t, log.Close())
 	require.Equal(t, len(logTestData), len(log.segments))
+}
+
+func testList(t *testing.T, log *Log) {
+	t.Helper()
+
+	uids, err := log.list()
+	require.NoError(t, err)
+	require.Equal(t, len(logTestData), len(uids))
+
+	for i := 0; i < len(logTestData); i++ {
+		require.Equal(t, logTestData[i].Epoch, uids[i])
+	}
 }
 
 func testLogRead(t *testing.T, log *Log) {
