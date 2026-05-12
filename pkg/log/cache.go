@@ -46,16 +46,14 @@ func (c *lru) put(epoch, hash, pos int64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	e, ok := c.cache[key{epoch, hash}]
+	key := key{epoch, hash}
+	e, ok := c.cache[key]
 	if ok {
 		e.Value.(*entry).pos = pos
 		c.list.MoveToFront(e)
 		return
 	}
 
-	key := key{
-		epoch, hash,
-	}
 	ent := &entry{key, pos}
 	e = c.list.PushFront(ent)
 	c.cache[key] = e

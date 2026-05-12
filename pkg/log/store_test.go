@@ -54,9 +54,9 @@ func testRead(t *testing.T, s *store) {
 
 	var pos uint64
 	for i := uint64(1); i < 4; i++ {
-		read, err := s.read(pos)
+		b, err := s.read(pos)
 		require.NoError(t, err)
-		require.Equal(t, storeTestData, read)
+		require.Equal(t, storeTestData, b)
 		pos += storeTestLength
 	}
 }
@@ -84,13 +84,22 @@ func testReadAt(t *testing.T, s *store) {
 func testRevert(t *testing.T, s *store) {
 	t.Helper()
 
-	beforeSize := s.size
+	_, beforeSize, err := openFile(s.Name())
+	require.NoError(t, err)
+
+	storeSize := s.size
+	require.Equal(t, uint64(beforeSize), storeSize)
+
 	require.NoError(t, s.revert(storeTestLength))
-	require.Equal(t, beforeSize-storeTestLength, s.size)
+	require.Equal(t, storeSize-storeTestLength, s.size)
 
 	b, err := s.read(s.size - storeTestLength)
 	require.NoError(t, err)
 	require.Equal(t, storeTestData, b)
+
+	_, afterSize, err := openFile(s.Name())
+	require.NoError(t, err)
+	require.Equal(t, uint64(afterSize), s.size)
 }
 
 func testClose(t *testing.T, s *store) {
@@ -107,4 +116,6 @@ func testClose(t *testing.T, s *store) {
 	_, afterSize, err := openFile(s.Name())
 	require.NoError(t, err)
 	require.True(t, afterSize > beforeSize)
+
+	require.NoError(t, s.close())
 }

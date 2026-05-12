@@ -14,7 +14,7 @@ import (
 
 var generateTestData = func() [][]byte {
 	res := [][]byte{}
-	for i := 0; i < math.IntN(10); i++ {
+	for i := 0; i < math.IntN(10)+1; i++ {
 		b := make([]byte, math.IntN(4096-32)+32)
 		rand.Read(b)
 		res = append(res, b)
@@ -42,7 +42,7 @@ func TestIter(t *testing.T) {
 		err = log.Append(ctx, &Record{Epoch: now, Hash: int64(i), Data: data[i]})
 		require.NoError(t, err)
 	}
-	log.Close()
+	require.NoError(t, log.Close())
 
 	iter, err = log.Iter()
 	require.NoError(t, err)

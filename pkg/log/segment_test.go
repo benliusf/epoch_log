@@ -2,6 +2,7 @@ package log
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"syscall"
 	"testing"
@@ -27,6 +28,7 @@ func TestSegment(t *testing.T) {
 	}
 	seg, err := newSegment(now, conf)
 	require.NoError(t, err)
+
 	for _, tt := range testData {
 		require.NoError(t, seg.append(tt))
 	}
@@ -55,4 +57,21 @@ func TestSegment(t *testing.T) {
 		require.Equal(t, tt.Data, b)
 		pos += len(tt.Data) + lenOffset
 	}
+}
+
+func TestReader(t *testing.T) {
+	dir, err := os.MkdirTemp("", "test_reader")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	conf := Config{
+		Dir: dir,
+	}
+	seg, err := newReader(time.Now().Unix(), conf)
+	require.Nil(t, seg)
+	require.ErrorIs(t, err, fs.ErrNotExist)
+
+	files, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	require.Empty(t, files)
 }

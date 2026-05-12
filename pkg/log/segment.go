@@ -28,7 +28,7 @@ func newSegment(uid int64, conf Config) (*segment, error) {
 		return nil, err
 	}
 	if s.index, err = newIndex(indexFile); err != nil {
-		defer s.store.close()
+		s.store.close()
 		return nil, err
 	}
 	return s, nil
@@ -49,7 +49,7 @@ func newReader(uid int64, conf Config) (*segment, error) {
 		return nil, err
 	}
 	if s.index, err = newIndex(indexFile); err != nil {
-		defer s.store.Close()
+		s.store.Close()
 		return nil, err
 	}
 	return s, nil
@@ -111,8 +111,5 @@ func (s *segment) close() error {
 }
 
 func (s *segment) remove() error {
-	if err := s.close(); err != nil {
-		return err
-	}
 	return errors.Join(os.Remove(s.store.Name()), os.Remove(s.index.Name()))
 }

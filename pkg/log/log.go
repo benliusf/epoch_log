@@ -2,7 +2,9 @@ package log
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,12 +26,12 @@ type Log struct {
 	closed atomic.Bool
 }
 
-func NewLog(c Config) (*Log, error) {
-	if c.Dir == "" {
-		return nil, fmt.Errorf("must specify directory!")
+func NewLog(conf Config) (*Log, error) {
+	if conf.Dir == "" {
+		return nil, fmt.Errorf("must specify directory")
 	}
 	l := &Log{
-		Config:   c,
+		Config:   conf,
 		segments: map[int64]*segment{},
 	}
 	if l.Config.Buffer.Size == 0 {
@@ -63,6 +65,9 @@ func (l *Log) Append(ctx context.Context, data *Record) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
+	if l.closed.Load() {
+		return fmt.Errorf("log is closed")
+	}
 	select {
 	case <-ctx.Done():
 		return fmt.Errorf("context is closed")
@@ -83,8 +88,10 @@ func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
 	if s, ok := l.segments[epoch]; ok {
 		reader = s
 	} else {
-		reader, err = newReader(epoch, l.Config)
-		if err != nil {
+		if reader, err = newReader(epoch, l.Config); err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil, nil
+			}
 			return nil, err
 		}
 	}
@@ -115,8 +122,14 @@ func (l *Log) Close() error {
 	if l.closed.Load() {
 		return nil
 	}
+
 	close(l.buf)
 	l.w.flush()
+	for _, s := range l.segments {
+		if err := s.close(); err != nil {
+			return err
+		}
+	}
 	l.closed.Store(true)
 	return nil
 }

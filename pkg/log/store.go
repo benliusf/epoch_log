@@ -3,6 +3,7 @@ package log
 import (
 	"bufio"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 )
@@ -93,6 +94,12 @@ func (s *store) readAt(b []byte, off uint64) (int, error) {
 }
 
 func (s *store) close() error {
+	if _, err := s.Stat(); err != nil {
+		if errors.Is(err, os.ErrClosed) {
+			return nil
+		}
+		return err
+	}
 	if err := s.flush(); err != nil {
 		return err
 	}

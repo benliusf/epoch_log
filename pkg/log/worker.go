@@ -17,7 +17,7 @@ func (w *worker) run() {
 	go func() {
 		for record := range w.log.buf {
 			if err := w.write(record); err != nil {
-				w.error(record, err)
+				w.error(err, record)
 			}
 		}
 		w.done <- struct{}{}
@@ -43,12 +43,12 @@ func (w *worker) flush() {
 	<-w.done
 	for _, segment := range w.log.segments {
 		if err := segment.flush(); err != nil {
-			w.error(nil, err)
+			w.error(err, nil)
 		}
 	}
 }
 
-func (w *worker) error(record *Record, err error) {
+func (w *worker) error(err error, record *Record) {
 	if w.log.errs != nil {
 		w.log.errs <- &LogError{
 			error:  err,
