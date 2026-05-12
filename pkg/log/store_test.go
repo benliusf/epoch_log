@@ -12,8 +12,20 @@ var (
 	storeTestLength = uint64(len(storeTestData)) + lenOffset
 )
 
-func TestStoreWriteRead(t *testing.T) {
-	f, err := os.CreateTemp("", "test_store_write_read")
+var openFile = func(name string) (file *os.File, size int64, err error) {
+	f, err := os.OpenFile(name, os.O_RDONLY, 0444)
+	if err != nil {
+		return nil, 0, err
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, 0, err
+	}
+	return f, fi.Size(), nil
+}
+
+func TestStore(t *testing.T) {
+	f, err := os.CreateTemp("", "test_store")
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
 
@@ -23,6 +35,8 @@ func TestStoreWriteRead(t *testing.T) {
 	testWrite(t, s)
 	testRead(t, s)
 	testReadAt(t, s)
+	testRevert(t, s)
+	testClose(t, s)
 }
 
 func testWrite(t *testing.T, s *store) {
@@ -67,15 +81,8 @@ func testReadAt(t *testing.T, s *store) {
 	}
 }
 
-func TestStoreRevert(t *testing.T) {
-	f, err := os.CreateTemp("", "test_store_revert")
-	require.NoError(t, err)
-	defer os.Remove(f.Name())
-
-	s, err := newStore(f, 0)
-	require.NoError(t, err)
-
-	testWrite(t, s)
+func testRevert(t *testing.T, s *store) {
+	t.Helper()
 
 	beforeSize := s.size
 	require.NoError(t, s.revert(storeTestLength))
@@ -86,37 +93,18 @@ func TestStoreRevert(t *testing.T) {
 	require.Equal(t, storeTestData, b)
 }
 
-func TestStoreClose(t *testing.T) {
-	f, err := os.CreateTemp("", "test_store_close")
-	require.NoError(t, err)
-	defer os.Remove(f.Name())
+func testClose(t *testing.T, s *store) {
+	t.Helper()
 
-	s, err := newStore(f, 0)
-	require.NoError(t, err)
-	_, _, err = s.write(storeTestData)
+	_, _, err := s.write(storeTestData)
 	require.NoError(t, err)
 
-	_, beforeSize, err := openFile(f.Name())
+	_, beforeSize, err := openFile(s.Name())
 	require.NoError(t, err)
 
-	err = s.close()
-	require.NoError(t, err)
+	require.NoError(t, s.close())
 
-	_, afterSize, err := openFile(f.Name())
+	_, afterSize, err := openFile(s.Name())
 	require.NoError(t, err)
 	require.True(t, afterSize > beforeSize)
-}
-
-func openFile(name string) (file *os.File, size int64, err error) {
-	f, err := os.OpenFile(name,
-		os.O_RDWR|os.O_CREATE|os.O_APPEND,
-		0644)
-	if err != nil {
-		return nil, 0, err
-	}
-	fi, err := f.Stat()
-	if err != nil {
-		return nil, 0, err
-	}
-	return f, fi.Size(), nil
 }

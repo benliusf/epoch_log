@@ -25,12 +25,13 @@ var generateTestData = func() [][]byte {
 func TestIter(t *testing.T) {
 	dir, err := os.MkdirTemp("", "test_iter")
 	require.NoError(t, err)
+	defer os.RemoveAll(dir)
 
+	ctx := context.TODO()
 	log, err := NewLog(Config{
 		Dir: dir,
 	})
 	require.NoError(t, err)
-	defer log.Remove()
 
 	iter, err := log.Iter()
 	require.False(t, iter.HasNext())
@@ -38,11 +39,8 @@ func TestIter(t *testing.T) {
 	now := time.Now().Unix()
 	data := generateTestData()
 	for i := 0; i < len(data); i++ {
-		require.NoError(t, log.Append(context.TODO(), &Record{
-			Epoch: now,
-			Hash:  int64(i),
-			Data:  data[i],
-		}))
+		err = log.Append(ctx, &Record{Epoch: now, Hash: int64(i), Data: data[i]})
+		require.NoError(t, err)
 	}
 	log.Close()
 

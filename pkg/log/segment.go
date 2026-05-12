@@ -58,7 +58,7 @@ func newReader(uid int64, conf Config) (*segment, error) {
 func openFiles(uid int64, dir string, readOnly bool) (storeFile, indexFile *os.File, err error) {
 	flag, mode := os.O_RDWR|os.O_CREATE|os.O_APPEND, os.FileMode(0644)
 	if readOnly {
-		flag, mode = os.O_RDWR, os.FileMode(0444)
+		flag, mode = os.O_RDONLY, os.FileMode(0444)
 	}
 	storeFile, err = os.OpenFile(
 		path.Join(dir, fmt.Sprintf("%d%s", uid, storeExt)), flag, mode,
@@ -97,7 +97,13 @@ func (s *segment) append(record *Record) error {
 }
 
 func (s *segment) flush() error {
-	return errors.Join(s.store.flush(), s.index.flush())
+	if err := s.store.flush(); err != nil {
+		return err
+	}
+	if err := s.index.flush(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *segment) close() error {

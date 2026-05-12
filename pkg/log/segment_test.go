@@ -1,7 +1,9 @@
 package log
 
 import (
+	"errors"
 	"os"
+	"syscall"
 	"testing"
 	"time"
 
@@ -9,43 +11,48 @@ import (
 )
 
 func TestSegment(t *testing.T) {
-	now := time.Now().Unix()
-	testData := []*Record{
-		&Record{
-			Epoch: now,
-			Hash:  123,
-			Data:  []byte("hello world"),
-		},
-		&Record{
-			Epoch: now,
-			Hash:  456,
-			Data:  []byte("hello mars"),
-		},
-	}
-
 	dir, err := os.MkdirTemp("", "test_segment")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
+	now := time.Now().Unix()
+	testData := []*Record{
+		&Record{Epoch: now, Hash: 123, Data: []byte("hello world")},
+		&Record{Epoch: now, Hash: 456, Data: []byte("hello moon")},
+		&Record{Epoch: now, Hash: 456, Data: []byte("hello mars")},
+	}
+
 	conf := Config{
 		Dir: dir,
 	}
-
 	seg, err := newSegment(now, conf)
 	require.NoError(t, err)
 	for _, tt := range testData {
 		require.NoError(t, seg.append(tt))
 	}
-	require.NoError(t, seg.flush())
+	require.NoError(t, seg.close())
 
-	iter := seg.index.iter()
-	offset := 0
+	_, beforeSize, err := openFile(seg.store.Name())
+	require.NoError(t, err)
+
+	seg, err = newReader(now, conf)
+	require.NoError(t, err)
+
+	err = errors.Join(seg.append(&Record{Epoch: now, Hash: 101, Data: []byte("do not append")}), seg.flush())
+	require.Error(t, err)
+	require.True(t, errors.Is(err, syscall.EBADF))
+
+	_, afterSize, err := openFile(seg.store.Name())
+	require.NoError(t, err)
+	require.Equal(t, beforeSize, afterSize)
+
+	seg, err = newReader(now, conf)
+	require.NoError(t, err)
+	pos := 0
 	for _, tt := range testData {
-		require.True(t, iter.hasNext())
-		hash, pos, err := iter.next()
+		b, err := seg.store.read(uint64(pos))
 		require.NoError(t, err)
-		require.Equal(t, uint64(tt.Hash), hash)
-		require.Equal(t, uint64(offset), pos)
-		offset += lenOffset + len(tt.Data)
+		require.Equal(t, tt.Data, b)
+		pos += len(tt.Data) + lenOffset
 	}
 }
