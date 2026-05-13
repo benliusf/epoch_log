@@ -47,15 +47,15 @@ func (c *lru) put(epoch, hash, pos int64) {
 	defer c.mu.Unlock()
 
 	key := key{epoch, hash}
-	e, ok := c.cache[key]
-	if ok {
+
+	if e, ok := c.cache[key]; ok {
 		e.Value.(*entry).pos = pos
 		c.list.MoveToFront(e)
 		return
 	}
 
 	ent := &entry{key, pos}
-	e = c.list.PushFront(ent)
+	e := c.list.PushFront(ent)
 	c.cache[key] = e
 
 	if c.list.Len() > c.cap {

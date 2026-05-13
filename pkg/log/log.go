@@ -39,21 +39,24 @@ func NewLog(conf Config) (*Log, error) {
 		Config:   conf,
 		segments: map[int64]*segment{},
 	}
-	if l.Config.Buffer.Size == 0 {
-		l.Config.Buffer.Size = 1_000
+	if l.Config.Write.Size <= 0 {
+		l.Config.Write.Size = 1_000
 	}
-	if l.Config.Buffer.Timeout <= 0 {
-		l.Config.Buffer.Timeout = 10 * time.Second
+	if l.Config.Write.Timeout <= 0 {
+		l.Config.Write.Timeout = 10 * time.Second
+	}
+	if l.Config.Read.Size <= 0 {
+		l.Config.Read.Size = 10_000
 	}
 	return l, l.setup()
 }
 
 func (l *Log) setup() error {
-	l.buf = make(chan *Record, l.Config.Buffer.Size)
+	l.buf = make(chan *Record, l.Config.Write.Size)
 	l.errs = l.Config.Errors
 	l.w = newWorker(l)
 	l.w.run()
-	l.cache = newLRUCache(10_000)
+	l.cache = newLRUCache(l.Config.Read.Size)
 	return nil
 }
 
@@ -107,7 +110,7 @@ func (l *Log) Append(ctx context.Context, data *Record) error {
 	select {
 	case <-ctx.Done():
 		return fmt.Errorf("context is closed")
-	case <-time.After(l.Config.Buffer.Timeout):
+	case <-time.After(l.Config.Write.Timeout):
 		return fmt.Errorf("timed out")
 	case l.buf <- data:
 	}

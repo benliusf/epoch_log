@@ -39,8 +39,8 @@ func TestIter(t *testing.T) {
 	now := time.Now().Unix()
 	data := generateTestData()
 	for i := 0; i < len(data); i++ {
-		err = log.Append(ctx, &Record{Epoch: now, Hash: int64(i), Data: data[i]})
-		require.NoError(t, err)
+		r := &Record{Epoch: now, Hash: int64(i), Data: data[i]}
+		require.NoError(t, log.Append(ctx, r))
 	}
 	require.NoError(t, log.Close())
 

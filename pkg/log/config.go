@@ -3,10 +3,13 @@ package log
 import "time"
 
 type Config struct {
-	Dir    string
-	Buffer struct {
-		Size    uint64
+	Dir   string
+	Write struct {
+		Size    int
 		Timeout time.Duration
+	}
+	Read struct {
+		Size int
 	}
 	Errors chan *LogError
 }
