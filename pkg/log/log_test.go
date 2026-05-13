@@ -49,6 +49,7 @@ func testAppend(t *testing.T, log *Log) {
 		require.NoError(t, err)
 	}
 	require.NoError(t, log.Close())
+	require.Error(t, log.Append(ctx, &Record{}))
 	require.Equal(t, len(logTestData), len(log.segments))
 }
 
@@ -72,28 +73,32 @@ func testLogRead(t *testing.T, log *Log) {
 	})
 	require.NoError(t, err)
 
+	b, err := log.Read(time.Now().Unix(), 123)
+	require.Nil(t, b)
+	require.NoError(t, err)
+
 	for _, r := range logTestData {
 		b, err := log.Read(r.Epoch, r.Hash)
 		require.NoError(t, err)
 		require.NotNil(t, b)
 		require.Equal(t, r.Data, b)
 	}
-	b, err := log.Read(time.Now().Unix(), 123)
-	require.Nil(t, b)
-	require.NoError(t, err)
-
 	require.NoError(t, log.Close())
 }
 
 func testRemove(t *testing.T, log *Log) {
 	t.Helper()
 
-	_, err := os.Create(path.Join(log.Config.Dir, "donotdelete.me"))
+	tmp, err := newSegment(time.Now().Unix(), log.Config)
+	require.NoError(t, err)
+	require.NoError(t, tmp.close())
+
+	_, err = os.Create(path.Join(log.Config.Dir, "donotdelete.me"))
 	require.NoError(t, err)
 
 	files, err := os.ReadDir(log.Config.Dir)
 	require.NoError(t, err)
-	require.Equal(t, (len(logTestData)*2)+1, len(files))
+	require.Equal(t, (len(logTestData)*2)+3, len(files))
 
 	require.NoError(t, log.Remove())
 

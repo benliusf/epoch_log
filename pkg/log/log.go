@@ -179,6 +179,17 @@ func (l *Log) Remove() error {
 			return err
 		}
 	}
+	uids, err := l.list()
+	if err != nil {
+		return err
+	}
+	for _, uid := range uids {
+		if tmp, err := newSegment(uid, l.Config); err != nil {
+			return err
+		} else if err := tmp.remove(); err != nil {
+			return err
+		}
+	}
 	l.segments = make(map[int64]*segment)
 	return nil
 }
