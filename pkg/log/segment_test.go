@@ -74,4 +74,14 @@ func TestReader(t *testing.T) {
 	files, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	require.Empty(t, files)
+
+	now := time.Now().Truncate(60 * time.Minute).Unix()
+	storeFile, indexFile, err := openFiles(now, dir, false)
+	require.NoError(t, err)
+	require.NoError(t, storeFile.Close())
+	require.NoError(t, indexFile.Close())
+
+	seg, err = newReader(now, conf)
+	require.NoError(t, err)
+	require.ErrorIs(t, seg.remove(), os.ErrPermission)
 }

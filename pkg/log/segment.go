@@ -14,6 +14,8 @@ type segment struct {
 
 	store *store
 	index *index
+
+	readOnly bool
 }
 
 func newSegment(uid int64, conf Config) (*segment, error) {
@@ -36,7 +38,8 @@ func newSegment(uid int64, conf Config) (*segment, error) {
 
 func newReader(uid int64, conf Config) (*segment, error) {
 	s := &segment{
-		uid: uid,
+		uid:      uid,
+		readOnly: true,
 	}
 	storeFile, indexFile, err := openFiles(uid, conf.Dir, true)
 	if err != nil {
@@ -111,5 +114,8 @@ func (s *segment) close() error {
 }
 
 func (s *segment) remove() error {
+	if s.readOnly {
+		return os.ErrPermission
+	}
 	return errors.Join(os.Remove(s.store.Name()), os.Remove(s.index.Name()))
 }

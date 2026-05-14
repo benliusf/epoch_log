@@ -20,7 +20,10 @@ func newIter(l *Log) (*Iter, error) {
 	if err != nil {
 		return nil, err
 	}
-	iter := &Iter{log: l, uids: uids}
+	iter := &Iter{
+		log:  l,
+		uids: uids,
+	}
 	return iter, iter.open()
 }
 
@@ -44,10 +47,7 @@ func (i *Iter) rotate() error {
 		}
 	}
 	i.idx++
-	if err := i.open(); err != nil {
-		return err
-	}
-	return nil
+	return i.open()
 }
 
 func (i *Iter) HasNext() bool {

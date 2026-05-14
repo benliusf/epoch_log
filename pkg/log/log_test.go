@@ -62,6 +62,9 @@ func testList(t *testing.T, log *Log) {
 
 	for i := 0; i < len(logTestData); i++ {
 		require.Equal(t, logTestData[i].Epoch, uids[i])
+		if i > 0 {
+			require.Less(t, uids[i-1], uids[i])
+		}
 	}
 }
 

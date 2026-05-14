@@ -18,12 +18,6 @@ func newIndex(f *os.File) (*index, error) {
 	return &index{s}, nil
 }
 
-func (i *index) iter() *indexIter {
-	return &indexIter{
-		index: i,
-	}
-}
-
 func (i *index) write(p []byte) (n uint64, pos uint64, err error) {
 	pos = i.size
 	w, err := i.buf.Write(p)
@@ -32,6 +26,12 @@ func (i *index) write(p []byte) (n uint64, pos uint64, err error) {
 	}
 	i.size += uint64(w)
 	return uint64(w), pos, nil
+}
+
+func (i *index) iter() *indexIter {
+	return &indexIter{
+		index: i,
+	}
 }
 
 type indexIter struct {
