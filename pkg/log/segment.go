@@ -30,7 +30,7 @@ func newSegment(uid int64, conf Config) (*segment, error) {
 		return nil, err
 	}
 	if s.index, err = newIndex(indexFile); err != nil {
-		s.store.close()
+		s.store.Close()
 		return nil, err
 	}
 	return s, nil

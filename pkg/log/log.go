@@ -142,13 +142,13 @@ func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
 
 	iter := reader.index.iter()
 	for iter.hasNext() {
-		idxHash, pos, err := iter.next()
-		if err != nil {
+		if idxHash, pos, err := iter.next(); err != nil {
 			return nil, err
-		}
-		l.cache.put(epoch, int64(idxHash), int64(pos))
-		if int64(idxHash) == hash {
-			return reader.store.read(pos)
+		} else {
+			l.cache.put(epoch, int64(idxHash), int64(pos))
+			if int64(idxHash) == hash {
+				return reader.store.read(pos)
+			}
 		}
 	}
 	return nil, nil
@@ -177,11 +177,13 @@ func (l *Log) Remove() error {
 	if err := l.Close(); err != nil {
 		return err
 	}
-	for _, s := range l.segments {
+	for e, s := range l.segments {
 		if err := s.remove(); err != nil {
 			return err
 		}
+		delete(l.segments, e)
 	}
+
 	uids, err := l.list()
 	if err != nil {
 		return err
@@ -193,7 +195,6 @@ func (l *Log) Remove() error {
 			return err
 		}
 	}
-	l.segments = make(map[int64]*segment)
 	return nil
 }
 
