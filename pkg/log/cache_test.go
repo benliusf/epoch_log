@@ -11,6 +11,13 @@ import (
 )
 
 func TestLRU(t *testing.T) {
+	t.Run("basic", testLRU_Basic)
+	t.Run("concurrency", testLRU_Concurrency)
+}
+
+func testLRU_Basic(t *testing.T) {
+	t.Helper()
+
 	lru := newLRUCache(1)
 
 	t1 := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
@@ -35,7 +42,9 @@ func TestLRU(t *testing.T) {
 	require.Equal(t, p2, tmp)
 }
 
-func TestLRU_Concurrency(t *testing.T) {
+func testLRU_Concurrency(t *testing.T) {
+	t.Helper()
+
 	lru := newLRUCache(5)
 
 	start := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)

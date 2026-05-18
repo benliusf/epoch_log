@@ -54,8 +54,7 @@ func (c *lru) put(epoch, hash, pos int64) {
 		return
 	}
 
-	ent := &entry{key, pos}
-	e := c.list.PushFront(ent)
+	e := c.list.PushFront(&entry{key, pos})
 	c.cache[key] = e
 
 	if c.list.Len() > c.cap {

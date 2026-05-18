@@ -7,11 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	storeTestData   = []byte("hello world")
-	storeTestLength = uint64(len(storeTestData)) + lenOffset
-)
-
 var openFile = func(name string) (file *os.File, size int64, err error) {
 	f, err := os.OpenFile(name, os.O_RDONLY, 0444)
 	if err != nil {
@@ -25,6 +20,10 @@ var openFile = func(name string) (file *os.File, size int64, err error) {
 }
 
 func TestStore(t *testing.T) {
+	var (
+		testData   = []byte("hello world")
+		testLength = uint64(len(testData)) + lenOffset
+	)
 	f, err := os.CreateTemp("", "test_store")
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
@@ -32,90 +31,71 @@ func TestStore(t *testing.T) {
 	s, err := newStore(f, 0)
 	require.NoError(t, err)
 
-	testWrite(t, s)
-	testRead(t, s)
-	testReadAt(t, s)
-	testRevert(t, s)
-	testClose(t, s)
-}
+	const n = 4
+	t.Run("write", func(t *testing.T) {
+		for i := uint64(1); i < uint64(n); i++ {
+			n, pos, err := s.write(testData)
+			require.NoError(t, err)
+			require.Equal(t, pos+n, testLength*i)
+		}
+	})
+	t.Run("read", func(t *testing.T) {
+		var pos uint64
+		for i := uint64(1); i < uint64(n); i++ {
+			b, err := s.read(pos)
+			require.NoError(t, err)
+			require.Equal(t, testData, b)
+			pos += testLength
+		}
+	})
+	t.Run("readAt", func(t *testing.T) {
+		for i, off := uint64(1), uint64(0); i < uint64(n); i++ {
+			b := make([]byte, lenOffset)
+			n, err := s.readAt(b, off)
+			require.NoError(t, err)
+			require.Equal(t, lenOffset, n)
+			off += uint64(n)
 
-func testWrite(t *testing.T, s *store) {
-	t.Helper()
-
-	for i := uint64(1); i < 4; i++ {
-		n, pos, err := s.write(storeTestData)
+			size := enc.Uint64(b)
+			b = make([]byte, size)
+			n, err = s.readAt(b, off)
+			require.NoError(t, err)
+			require.Equal(t, testData, b)
+			require.Equal(t, int(size), n)
+			off += uint64(n)
+		}
+	})
+	t.Run("revert", func(t *testing.T) {
+		_, beforeSize, err := openFile(s.Name())
 		require.NoError(t, err)
-		require.Equal(t, pos+n, storeTestLength*i)
-	}
-}
 
-func testRead(t *testing.T, s *store) {
-	t.Helper()
+		storeSize := s.size
+		require.Equal(t, uint64(beforeSize), storeSize)
 
-	var pos uint64
-	for i := uint64(1); i < 4; i++ {
-		b, err := s.read(pos)
+		require.NoError(t, s.revert(testLength))
+		require.Equal(t, storeSize-testLength, s.size)
+
+		b, err := s.read(s.size - testLength)
 		require.NoError(t, err)
-		require.Equal(t, storeTestData, b)
-		pos += storeTestLength
-	}
-}
+		require.Equal(t, testData, b)
 
-func testReadAt(t *testing.T, s *store) {
-	t.Helper()
-
-	for i, off := uint64(1), uint64(0); i < 4; i++ {
-		b := make([]byte, lenOffset)
-		n, err := s.readAt(b, off)
+		_, afterSize, err := openFile(s.Name())
 		require.NoError(t, err)
-		require.Equal(t, lenOffset, n)
-		off += uint64(n)
-
-		size := enc.Uint64(b)
-		b = make([]byte, size)
-		n, err = s.readAt(b, off)
+		require.Equal(t, uint64(afterSize), s.size)
+	})
+	t.Run("close", func(t *testing.T) {
+		_, _, err := s.write(testData)
 		require.NoError(t, err)
-		require.Equal(t, storeTestData, b)
-		require.Equal(t, int(size), n)
-		off += uint64(n)
-	}
-}
 
-func testRevert(t *testing.T, s *store) {
-	t.Helper()
+		_, beforeSize, err := openFile(s.Name())
+		require.NoError(t, err)
 
-	_, beforeSize, err := openFile(s.Name())
-	require.NoError(t, err)
+		require.NoError(t, s.close())
 
-	storeSize := s.size
-	require.Equal(t, uint64(beforeSize), storeSize)
+		_, afterSize, err := openFile(s.Name())
+		require.NoError(t, err)
+		require.True(t, afterSize > beforeSize)
 
-	require.NoError(t, s.revert(storeTestLength))
-	require.Equal(t, storeSize-storeTestLength, s.size)
-
-	b, err := s.read(s.size - storeTestLength)
-	require.NoError(t, err)
-	require.Equal(t, storeTestData, b)
-
-	_, afterSize, err := openFile(s.Name())
-	require.NoError(t, err)
-	require.Equal(t, uint64(afterSize), s.size)
-}
-
-func testClose(t *testing.T, s *store) {
-	t.Helper()
-
-	_, _, err := s.write(storeTestData)
-	require.NoError(t, err)
-
-	_, beforeSize, err := openFile(s.Name())
-	require.NoError(t, err)
-
-	require.NoError(t, s.close())
-
-	_, afterSize, err := openFile(s.Name())
-	require.NoError(t, err)
-	require.True(t, afterSize > beforeSize)
-
-	require.NoError(t, s.close())
+		require.NoError(t, s.close())
+	})
 }
