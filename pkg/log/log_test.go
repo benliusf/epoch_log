@@ -57,7 +57,7 @@ func TestLog(t *testing.T) {
 		}
 	})
 	t.Run("read", func(t *testing.T) {
-		log, err = NewLog(Config{Dir: log.Config.Dir})
+		log, err = NewLog(Config{Dir: dir})
 		require.NoError(t, err)
 
 		b, err := log.Read(time.Now().Unix(), 123)
@@ -84,6 +84,7 @@ func TestLog(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, (len(testData)*2)+3, len(files))
 
+		log, err = NewLog(Config{Dir: dir})
 		require.NoError(t, log.Remove())
 
 		files, err = os.ReadDir(log.Config.Dir)
