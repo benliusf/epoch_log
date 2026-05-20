@@ -125,7 +125,6 @@ func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
 	if l.closed.Load() {
 		return nil, os.ErrClosed
 	}
-
 	var reader *segment
 	var err error
 	if s, ok := l.segments[epoch]; ok {
@@ -137,6 +136,7 @@ func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
 			}
 			return nil, err
 		}
+		l.segments[epoch] = reader
 	}
 
 	if pos, ok := l.cache.get(epoch, hash); ok {

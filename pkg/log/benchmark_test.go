@@ -1,0 +1,58 @@
+package log
+
+import (
+	"context"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+)
+
+func BenchmarkLog(b *testing.B) {
+	dir, err := os.MkdirTemp("", "benchmark_log")
+	require.NoError(b, err)
+	defer os.RemoveAll(dir)
+
+	ctx, now := context.Background(), time.Now()
+
+	errs := make(chan *LogError)
+	var logError error
+	go func() {
+		for e := range errs {
+			logError = e
+		}
+	}()
+
+	log, err := NewLog(Config{
+		Dir:    dir,
+		Errors: errs,
+	})
+	require.NoError(b, err)
+
+	require.NoError(b, log.Append(ctx, &Record{Epoch: now.Unix(), Hash: 1000, Data: []byte("hello world")}))
+
+	b.Run("append", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			log.Append(ctx, &Record{Epoch: now.Unix(), Hash: int64(i + 1000), Data: []byte("hello world")})
+		}
+		b.StopTimer()
+
+	})
+	require.NoError(b, log.Close())
+	close(errs)
+	require.NoError(b, logError)
+
+	log, err = NewLog(Config{Dir: dir})
+	require.NoError(b, err)
+	_, err = log.Read(now.Unix(), 1000)
+	require.NoError(b, err)
+
+	b.Run("read", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			log.Read(now.Unix(), 1000)
+		}
+	})
+}
