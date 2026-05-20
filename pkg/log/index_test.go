@@ -28,14 +28,12 @@ func TestIndex(t *testing.T) {
 		require.NoError(t, index.flush())
 	})
 	t.Run("iter", func(t *testing.T) {
-		iter := index.iter()
 		count := 0
-		for iter.hasNext() {
+		for iter := index.iter(); iter.hasNext(); count++ {
 			h, p, err := iter.next()
 			require.NoError(t, err)
 			require.Equal(t, uint64(123), h)
 			require.Equal(t, uint64(20), p)
-			count++
 		}
 		require.Equal(t, n, count)
 	})

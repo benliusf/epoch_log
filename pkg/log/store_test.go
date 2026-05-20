@@ -36,6 +36,7 @@ func TestStore(t *testing.T) {
 		for i := uint64(1); i < uint64(n); i++ {
 			n, pos, err := s.write(testData)
 			require.NoError(t, err)
+			require.Equal(t, testLength, n)
 			require.Equal(t, pos+n, testLength*i)
 		}
 	})

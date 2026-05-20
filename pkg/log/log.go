@@ -105,7 +105,7 @@ func (l *Log) Append(ctx context.Context, data *Record) error {
 		return ctx.Err()
 	}
 	if l.closed.Load() {
-		return fmt.Errorf("log is closed")
+		return os.ErrClosed
 	}
 	select {
 	case <-ctx.Done():
@@ -122,6 +122,10 @@ func (l *Log) Iter() (*Iter, error) {
 }
 
 func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
+	if l.closed.Load() {
+		return nil, os.ErrClosed
+	}
+
 	var reader *segment
 	var err error
 	if s, ok := l.segments[epoch]; ok {
@@ -135,8 +139,7 @@ func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
 		}
 	}
 
-	pos, ok := l.cache.get(epoch, hash)
-	if ok {
+	if pos, ok := l.cache.get(epoch, hash); ok {
 		return reader.store.read(uint64(pos))
 	}
 

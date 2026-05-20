@@ -35,6 +35,7 @@ func testLRU_Basic(t *testing.T) {
 
 	tmp, ok = lru.get(t1, k1)
 	require.False(t, ok)
+	require.Equal(t, int64(-1), tmp)
 
 	tmp, ok = lru.get(t2, k2)
 	require.True(t, ok)

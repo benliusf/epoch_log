@@ -34,12 +34,12 @@ func (c *lru) get(epoch, hash int64) (int64, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	e, ok := c.cache[key{epoch, hash}]
-	if !ok {
-		return -1, ok
+	if e, ok := c.cache[key{epoch, hash}]; ok {
+		c.list.MoveToFront(e)
+		return e.Value.(*entry).pos, ok
 	}
-	c.list.MoveToFront(e)
-	return e.Value.(*entry).pos, ok
+	return -1, false
+
 }
 
 func (c *lru) put(epoch, hash, pos int64) {
