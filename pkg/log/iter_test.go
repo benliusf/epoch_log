@@ -12,17 +12,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var generateTestData = func() [][]byte {
-	res := [][]byte{}
-	for i := 0; i < math.IntN(10)+1; i++ {
-		b := make([]byte, math.IntN(4096-32)+32)
-		rand.Read(b)
-		res = append(res, b)
-	}
-	return res
-}
-
 func TestIter(t *testing.T) {
+	var generateTestData = func() [][]byte {
+		res := [][]byte{}
+		for i := 0; i < math.IntN(10)+1; i++ {
+			b := make([]byte, math.IntN(4096-32)+32)
+			rand.Read(b)
+			res = append(res, b)
+		}
+		return res
+	}
+
 	dir, err := os.MkdirTemp("", "test_iter")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
@@ -36,7 +36,7 @@ func TestIter(t *testing.T) {
 	iter, err := log.Iter()
 	require.False(t, iter.HasNext())
 
-	now := time.Now().Unix()
+	now := time.Now().Truncate(60 * time.Minute).Unix()
 	data := generateTestData()
 	for i := 0; i < len(data); i++ {
 		r := &Record{Epoch: now, Hash: int64(i), Data: data[i]}

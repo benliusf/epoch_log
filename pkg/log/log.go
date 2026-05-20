@@ -23,9 +23,9 @@ type Log struct {
 	buf  chan *Record
 	errs chan *LogError
 
-	w *worker
-
 	cache *lru
+
+	w *worker
 
 	mu     sync.Mutex
 	closed atomic.Bool
@@ -54,9 +54,9 @@ func NewLog(conf Config) (*Log, error) {
 func (l *Log) setup() error {
 	l.buf = make(chan *Record, l.Config.Write.Size)
 	l.errs = l.Config.Errors
+	l.cache = newLRUCache(l.Config.Read.Size)
 	l.w = newWorker(l)
 	l.w.run()
-	l.cache = newLRUCache(l.Config.Read.Size)
 	return nil
 }
 
