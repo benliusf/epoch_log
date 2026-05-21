@@ -18,7 +18,7 @@ import (
 type Log struct {
 	Config Config
 
-	segments map[int64]*segment
+	segments *segments
 
 	buf  chan *Record
 	errs chan *LogError
@@ -37,7 +37,7 @@ func NewLog(conf Config) (*Log, error) {
 	}
 	l := &Log{
 		Config:   conf,
-		segments: map[int64]*segment{},
+		segments: newSegments(),
 	}
 	if l.Config.Write.Size <= 0 {
 		l.Config.Write.Size = 1_000
@@ -96,7 +96,7 @@ func (l *Log) newSegment(uid int64) (*segment, error) {
 	if err != nil {
 		return nil, err
 	}
-	l.segments[uid] = s
+	l.segments.put(uid, s)
 	return s, nil
 }
 
@@ -127,7 +127,7 @@ func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
 	}
 	var reader *segment
 	var err error
-	if s, ok := l.segments[epoch]; ok {
+	if s, ok := l.segments.get(epoch); ok {
 		reader = s
 	} else {
 		if reader, err = newReader(epoch, l.Config); err != nil {
@@ -136,7 +136,7 @@ func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
 			}
 			return nil, err
 		}
-		l.segments[epoch] = reader
+		l.segments.put(epoch, reader)
 	}
 
 	if pos, ok := l.cache.get(epoch, hash); ok {
@@ -167,7 +167,7 @@ func (l *Log) Close() error {
 
 	close(l.buf)
 	l.w.flush()
-	for _, s := range l.segments {
+	for _, s := range l.segments.iter() {
 		if err := s.close(); err != nil {
 			return err
 		}
@@ -180,11 +180,14 @@ func (l *Log) Remove() error {
 	if err := l.Close(); err != nil {
 		return err
 	}
-	for e, s := range l.segments {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	for e, s := range l.segments.iter() {
 		if err := s.remove(); err != nil {
 			return err
 		}
-		delete(l.segments, e)
+		l.segments.delete(e)
 	}
 
 	uids, err := l.list()

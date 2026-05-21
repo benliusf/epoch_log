@@ -25,7 +25,7 @@ func (w *worker) run() {
 }
 
 func (w *worker) write(record *Record) error {
-	s, ok := w.log.segments[record.Epoch]
+	s, ok := w.log.segments.get(record.Epoch)
 	if !ok {
 		tmp, err := w.log.newSegment(record.Epoch)
 		if err != nil {
@@ -41,7 +41,7 @@ func (w *worker) write(record *Record) error {
 
 func (w *worker) flush() {
 	<-w.done
-	for _, segment := range w.log.segments {
+	for _, segment := range w.log.segments.iter() {
 		if err := segment.flush(); err != nil {
 			w.error(err, nil)
 		}

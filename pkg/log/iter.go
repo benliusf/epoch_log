@@ -53,7 +53,7 @@ func (i *Iter) rotate() error {
 func (i *Iter) HasNext() bool {
 	if i.curr != nil {
 		return (i.pos < i.curr.store.size) ||
-			(i.idx+1 < len(i.log.segments))
+			(i.idx+1 < i.log.segments.size())
 	}
 	return false
 }

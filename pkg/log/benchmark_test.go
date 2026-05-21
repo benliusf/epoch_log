@@ -23,19 +23,18 @@ func BenchmarkLog(b *testing.B) {
 			logError = e
 		}
 	}()
-
 	log, err := NewLog(Config{
 		Dir:    dir,
 		Errors: errs,
 	})
 	require.NoError(b, err)
 
-	require.NoError(b, log.Append(ctx, &Record{Epoch: now.Unix(), Hash: 1000, Data: []byte("hello world")}))
+	require.NoError(b, log.Append(ctx, &Record{Epoch: now.Unix(), Hash: 99, Data: []byte("hello world")}))
 
 	b.Run("append", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			log.Append(ctx, &Record{Epoch: now.Unix(), Hash: int64(i + 1000), Data: []byte("hello world")})
+			log.Append(ctx, &Record{Epoch: now.Unix(), Hash: int64(i + 100), Data: []byte("hello world")})
 		}
 		b.StopTimer()
 
@@ -46,13 +45,21 @@ func BenchmarkLog(b *testing.B) {
 
 	log, err = NewLog(Config{Dir: dir})
 	require.NoError(b, err)
-	_, err = log.Read(now.Unix(), 1000)
-	require.NoError(b, err)
 
-	b.Run("read", func(b *testing.B) {
+	d, err := log.Read(now.Unix(), 99)
+	require.NoError(b, err)
+	require.Equal(b, []byte("hello world"), d)
+
+	b.Run("read_from_file", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			log.Read(now.Unix(), 1000)
+			log.Read(now.Unix(), int64(i+100))
+		}
+	})
+	b.Run("read_from_cache", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			log.Read(now.Unix(), 99)
 		}
 	})
 }

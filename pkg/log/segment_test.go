@@ -11,6 +11,40 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestSegments(t *testing.T) {
+	segments := newSegments()
+	segments.put(456, &segment{})
+	segments.put(123, &segment{})
+	segments.put(789, &segment{})
+
+	_, ok := segments.get(123)
+	require.True(t, ok)
+
+	_, ok = segments.get(999)
+	require.False(t, ok)
+
+	res := []int64{}
+	for k := range segments.iter() {
+		res = append(res, k)
+	}
+	require.Equal(t, segments.size(), len(res))
+
+	for i := 0; i < len(res); i++ {
+		if i > 0 {
+			require.Less(t, res[i-1], res[i])
+		}
+	}
+
+	segments.delete(123)
+	require.Equal(t, 2, segments.size())
+	_, ok = segments.get(123)
+	require.False(t, ok)
+	_, ok = segments.get(456)
+	require.True(t, ok)
+	_, ok = segments.get(789)
+	require.True(t, ok)	
+}
+
 func TestSegment(t *testing.T) {
 	dir, err := os.MkdirTemp("", "test_segment")
 	require.NoError(t, err)

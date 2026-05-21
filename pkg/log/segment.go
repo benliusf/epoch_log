@@ -5,9 +5,66 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"iter"
 	"os"
 	"path"
+	"slices"
+	"sync"
 )
+
+type segments struct {
+	mu sync.RWMutex
+
+	m map[int64]*segment
+}
+
+func newSegments() *segments {
+	return &segments{
+		m: make(map[int64]*segment),
+	}
+}
+
+func (s *segments) get(k int64) (*segment, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	tmp, ok := s.m[k]
+	return tmp, ok
+}
+
+func (s *segments) put(k int64, v *segment) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.m[k] = v
+}
+
+func (s *segments) delete(k int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.m, k)
+}
+
+func (s *segments) size() int {
+	return len(s.m)
+}
+
+func (s *segments) iter() iter.Seq2[int64, *segment] {
+	return func(yield func(int64, *segment) bool) {
+		keys := make([]int64, 0, len(s.m))
+		for k := range s.m {
+			keys = append(keys, k)
+		}
+		slices.Sort(keys)
+
+		for _, k := range keys {
+			if !yield(k, s.m[k]) {
+				return
+			}
+		}
+	}
+}
 
 type segment struct {
 	uid int64

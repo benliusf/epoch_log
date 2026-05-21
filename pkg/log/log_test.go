@@ -39,7 +39,7 @@ func TestLog(t *testing.T) {
 		}
 		require.NoError(t, log.Close())
 		require.Error(t, log.Append(ctx, &Record{}))
-		require.Equal(t, len(testData), len(log.segments))
+		require.Equal(t, len(testData), log.segments.size())
 
 		close(errs)
 		require.Equal(t, 0, len(errs))
