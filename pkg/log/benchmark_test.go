@@ -32,16 +32,25 @@ func BenchmarkLog(b *testing.B) {
 	require.NoError(b, log.Append(ctx, &Record{Epoch: now.Unix(), Hash: 99, Data: []byte("hello world")}))
 
 	b.Run("append", func(b *testing.B) {
-		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			log.Append(ctx, &Record{Epoch: now.Unix(), Hash: int64(i + 100), Data: []byte("hello world")})
 		}
-		b.StopTimer()
-
 	})
 	require.NoError(b, log.Close())
 	close(errs)
 	require.NoError(b, logError)
+
+	b.Run("iter", func(b *testing.B) {
+		iter, err := log.Iter()
+		require.NoError(b, err)
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			for iter.HasNext() {
+				iter.Next()
+			}
+		}
+	})
 
 	log, err = NewLog(Config{Dir: dir})
 	require.NoError(b, err)
@@ -51,13 +60,11 @@ func BenchmarkLog(b *testing.B) {
 	require.Equal(b, []byte("hello world"), d)
 
 	b.Run("read_from_file", func(b *testing.B) {
-		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			log.Read(now.Unix(), int64(i+100))
 		}
 	})
 	b.Run("read_from_cache", func(b *testing.B) {
-		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			log.Read(now.Unix(), 99)
 		}

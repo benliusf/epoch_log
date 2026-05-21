@@ -67,11 +67,9 @@ func (s *segments) iter() iter.Seq2[int64, *segment] {
 }
 
 type segment struct {
-	uid int64
-
-	store *store
-	index *index
-
+	uid      int64
+	store    *store
+	index    *index
 	readOnly bool
 }
 
