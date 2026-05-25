@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -28,8 +27,6 @@ type Log struct {
 
 	ctx  context.Context
 	done context.CancelFunc
-
-	mu sync.Mutex
 }
 
 func NewLog(conf Config) (*Log, error) {
@@ -158,9 +155,6 @@ func (l *Log) IsClosed() bool {
 }
 
 func (l *Log) Close() error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	if l.IsClosed() {
 		return nil
 	}
@@ -179,9 +173,6 @@ func (l *Log) Remove() error {
 	if err := l.Close(); err != nil {
 		return err
 	}
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	for e, s := range l.segments.iter() {
 		if err := s.remove(); err != nil {
 			return err
