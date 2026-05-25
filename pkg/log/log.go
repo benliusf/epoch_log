@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -27,8 +26,10 @@ type Log struct {
 
 	w *worker
 
-	mu     sync.Mutex
-	closed atomic.Bool
+	ctx  context.Context
+	done context.CancelFunc
+
+	mu sync.Mutex
 }
 
 func NewLog(conf Config) (*Log, error) {
@@ -36,8 +37,7 @@ func NewLog(conf Config) (*Log, error) {
 		return nil, fmt.Errorf("must specify directory")
 	}
 	l := &Log{
-		Config:   conf,
-		segments: newSegments(),
+		Config: conf,
 	}
 	if l.Config.Write.Size <= 0 {
 		l.Config.Write.Size = 1_000
@@ -52,6 +52,8 @@ func NewLog(conf Config) (*Log, error) {
 }
 
 func (l *Log) setup() error {
+	l.ctx, l.done = context.WithCancel(context.Background())
+	l.segments = newSegments()
 	l.buf = make(chan *Record, l.Config.Write.Size)
 	l.errs = l.Config.Errors
 	l.cache = newLRUCache(l.Config.Read.Size)
@@ -100,18 +102,15 @@ func (l *Log) newSegment(uid int64) (*segment, error) {
 	return s, nil
 }
 
-func (l *Log) Append(ctx context.Context, data *Record) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-	if l.closed.Load() {
+func (l *Log) Append(data *Record) error {
+	if l.IsClosed() {
 		return os.ErrClosed
 	}
 	select {
-	case <-ctx.Done():
-		return fmt.Errorf("context is closed")
+	case <-l.ctx.Done():
+		return os.ErrClosed
 	case <-time.After(l.Config.Write.Timeout):
-		return fmt.Errorf("timed out")
+		return os.ErrDeadlineExceeded
 	case l.buf <- data:
 	}
 	return nil
@@ -122,9 +121,6 @@ func (l *Log) Iter() (*Iter, error) {
 }
 
 func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
-	if l.closed.Load() {
-		return nil, os.ErrClosed
-	}
 	var reader *segment
 	var err error
 	if s, ok := l.segments.get(epoch); ok {
@@ -157,14 +153,18 @@ func (l *Log) Read(epoch int64, hash int64) ([]byte, error) {
 	return nil, nil
 }
 
+func (l *Log) IsClosed() bool {
+	return l.ctx.Err() != nil
+}
+
 func (l *Log) Close() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if l.closed.Load() {
+	if l.IsClosed() {
 		return nil
 	}
-
+	l.done()
 	close(l.buf)
 	l.w.flush()
 	for _, s := range l.segments.iter() {
@@ -172,7 +172,6 @@ func (l *Log) Close() error {
 			return err
 		}
 	}
-	l.closed.Store(true)
 	return nil
 }
 
@@ -189,7 +188,6 @@ func (l *Log) Remove() error {
 		}
 		l.segments.delete(e)
 	}
-
 	uids, err := l.list()
 	if err != nil {
 		return err
@@ -208,6 +206,5 @@ func (l *Log) Reset() error {
 	if err := l.Remove(); err != nil {
 		return err
 	}
-	l.closed.Swap(false)
 	return l.setup()
 }

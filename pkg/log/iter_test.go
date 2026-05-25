@@ -1,7 +1,6 @@
 package log
 
 import (
-	"context"
 	"crypto/rand"
 	"os"
 	"testing"
@@ -27,7 +26,6 @@ func TestIter(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	ctx := context.TODO()
 	log, err := NewLog(Config{
 		Dir: dir,
 	})
@@ -39,8 +37,7 @@ func TestIter(t *testing.T) {
 	now := time.Now().Truncate(60 * time.Minute).Unix()
 	data := generateTestData()
 	for i := 0; i < len(data); i++ {
-		r := &Record{Epoch: now, Hash: int64(i), Data: data[i]}
-		require.NoError(t, log.Append(ctx, r))
+		require.NoError(t, log.Append(&Record{Epoch: now, Hash: int64(i), Data: data[i]}))
 	}
 	require.NoError(t, log.Close())
 

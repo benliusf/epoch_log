@@ -1,7 +1,6 @@
 package log
 
 import (
-	"context"
 	"os"
 	"path"
 	"testing"
@@ -23,8 +22,6 @@ func TestLog(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	ctx := context.TODO()
-
 	errs := make(chan *LogError, 10)
 	log, err := NewLog(Config{
 		Dir:    dir,
@@ -34,13 +31,12 @@ func TestLog(t *testing.T) {
 
 	t.Run("append", func(t *testing.T) {
 		for _, r := range testData {
-			err := log.Append(ctx, r)
-			require.NoError(t, err)
+			require.NoError(t, log.Append(r))
 		}
 		require.NoError(t, log.Close())
-		require.Error(t, log.Append(ctx, &Record{}))
+		require.True(t, log.IsClosed())
+		require.Error(t, log.Append(&Record{}))
 		require.Equal(t, len(testData), log.segments.size())
-
 		close(errs)
 		require.Equal(t, 0, len(errs))
 	})
@@ -57,7 +53,7 @@ func TestLog(t *testing.T) {
 		}
 	})
 	t.Run("read", func(t *testing.T) {
-		log, err = NewLog(Config{Dir: dir})
+		log, err := NewLog(Config{Dir: dir})
 		require.NoError(t, err)
 
 		b, err := log.Read(time.Now().Unix(), 123)
@@ -90,5 +86,12 @@ func TestLog(t *testing.T) {
 		files, err = os.ReadDir(log.Config.Dir)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(files))
+	})
+	t.Run("reset", func(t *testing.T) {
+		require.NoError(t, log.Reset())
+		require.Equal(t, 0, log.segments.size())
+		require.NoError(t, log.Append(&Record{Epoch: time.Now().Unix(), Hash: 123, Data: []byte("hello world")}))
+		require.NoError(t, log.Close())
+		require.Equal(t, 1, log.segments.size())
 	})
 }

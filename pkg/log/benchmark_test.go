@@ -1,7 +1,6 @@
 package log
 
 import (
-	"context"
 	"os"
 	"testing"
 	"time"
@@ -14,7 +13,7 @@ func BenchmarkLog(b *testing.B) {
 	require.NoError(b, err)
 	defer os.RemoveAll(dir)
 
-	ctx, now := context.Background(), time.Now()
+	now := time.Now()
 
 	errs := make(chan *LogError)
 	var logError error
@@ -29,11 +28,11 @@ func BenchmarkLog(b *testing.B) {
 	})
 	require.NoError(b, err)
 
-	require.NoError(b, log.Append(ctx, &Record{Epoch: now.Unix(), Hash: 99, Data: []byte("hello world")}))
+	require.NoError(b, log.Append(&Record{Epoch: now.Unix(), Hash: 99, Data: []byte("hello world")}))
 
 	b.Run("append", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			log.Append(ctx, &Record{Epoch: now.Unix(), Hash: int64(i + 100), Data: []byte("hello world")})
+			log.Append(&Record{Epoch: now.Unix(), Hash: int64(i + 100), Data: []byte("hello world")})
 		}
 	})
 	require.NoError(b, log.Close())
